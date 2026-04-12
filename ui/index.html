@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OCR Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f4;
+      --panel: #ffffff;
+      --ink: #1f2a1f;
+      --muted: #6a746a;
+      --line: #d6ddd3;
+      --brand: #2e6f56;
+      --brand-soft: #e7f2ed;
+      --err: #a93a3a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Avenir Next", "PingFang SC", "Noto Sans SC", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 95% 0%, #ecf4ec 0, transparent 46%),
+        radial-gradient(circle at 0% 90%, #f0f2e8 0, transparent 42%),
+        var(--bg);
+    }
+
+    .wrap {
+      width: min(980px, 94vw);
+      margin: 40px auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 3vw, 34px);
+      letter-spacing: 0.02em;
+    }
+
+    .sub {
+      margin: 0 0 26px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(32, 47, 34, 0.06);
+      padding: 18px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+    }
+
+    .dropzone {
+      border: 1.5px dashed #8fa393;
+      border-radius: 14px;
+      background: #fbfdf9;
+      padding: 22px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+    }
+
+    .drop-main {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .drop-sub {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    select,
+    button {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 14px;
+      background: #fff;
+    }
+
+    button {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .files {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .file-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #fff;
+    }
+
+    .file-item img {
+      width: 100%;
+      aspect-ratio: 1.4;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #edf1ec;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .file-name {
+      font-size: 12px;
+      color: #3f4b40;
+      word-break: break-all;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+
+    .status.err { color: var(--err); }
+
+    .result-list {
+      margin-top: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .result-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .result-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #263229;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      color: #3e4f42;
+      margin: 8px 0 6px;
+      font-weight: 600;
+    }
+
+    .result-image {
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      border: 1px solid #e6ece4;
+      border-radius: 10px;
+      background: #f8faf7;
+      margin-bottom: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      border-bottom: 1px solid #edf1ec;
+      text-align: left;
+      padding: 7px 6px;
+      vertical-align: top;
+    }
+
+    th { color: #4d5c50; font-weight: 600; }
+
+    .mono {
+      font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      color: #516051;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>YOLO OCR</h1>
+    <p class="sub">上传图片或 PDF，调用 <code>/ocr</code> 后展示整体结果与明细。</p>
+
+    <section class="card controls">
+      <input id="fileInput" type="file" accept="image/*,.pdf,application/pdf" multiple hidden />
+
+      <div id="dropzone" class="dropzone">
+        <div class="drop-main">点击或拖拽上传图片/PDF</div>
+        <div class="drop-sub">支持多文件并发处理</div>
+      </div>
+
+      <div class="toolbar">
+        <label>
+          返回模式
+          <select id="mode">
+            <option value="external" selected>external (class_name:value)</option>
+            <option value="detail">detail (含 bbox)</option>
+          </select>
+        </label>
+        <button id="submitBtn" type="button" disabled>开始识别</button>
+      </div>
+
+      <div id="fileList" class="files"></div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section id="resultList" class="result-list"></section>
+  </main>
+
+  <script>
+    const input = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const submitBtn = document.getElementById('submitBtn');
+    const fileList = document.getElementById('fileList');
+    const statusEl = document.getElementById('status');
+    const resultList = document.getElementById('resultList');
+    const modeEl = document.getElementById('mode');
+
+    let selectedFiles = [];
+
+    function setStatus(text, isErr = false) {
+      statusEl.textContent = text || '';
+      statusEl.classList.toggle('err', isErr);
+    }
+
+    function setFiles(fileListLike) {
+      selectedFiles = Array.from(fileListLike || []);
+      submitBtn.disabled = selectedFiles.length === 0;
+      renderFilePreview();
+      resultList.innerHTML = '';
+      setStatus(selectedFiles.length ? `已选择 ${selectedFiles.length} 个文件` : '');
+    }
+
+    function renderFilePreview() {
+      fileList.innerHTML = '';
+      selectedFiles.forEach(file => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+
+        const img = document.createElement('img');
+        img.alt = file.name;
+        if ((file.type || '').startsWith('image/')) {
+          img.src = URL.createObjectURL(file);
+        } else {
+          img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="140">' +
+            '<rect width="100%" height="100%" fill="#f2f5f1"/>' +
+            '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#5d6c5f" font-size="20">PDF</text>' +
+            '</svg>'
+          );
+        }
+
+        const name = document.createElement('div');
+        name.className = 'file-name';
+        name.textContent = file.name;
+
+        item.appendChild(img);
+        item.appendChild(name);
+        fileList.appendChild(item);
+      });
+    }
+
+    function createExternalTable(data) {
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>class_name</th><th>value</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+
+      Object.entries(data || {}).forEach(([k, v]) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${escapeHtml(k)}</td><td>${escapeHtml(String(v ?? ''))}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      if (!tbody.children.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="2">无识别结果</td>';
+        tbody.appendChild(tr);
+      }
+
+      table.appendChild(tbody);
+      return table;
+    }
+
+    function formatBbox(bbox) {
+      if (Array.isArray(bbox) && bbox.length === 4) {
+        return `[${bbox.join(', ')}]`;
+      }
+      return '';
+    }
+
+    function createDetailTable(results) {
+      const table = document.createElement('table');
+      table.innerHTML = '<thead><tr><th>class_name</th><th>value</th><th>confidence</th><th>bbox</th></tr></thead>';
+      const tbody = document.createElement('tbody');
+
+      const rows = Array.isArray(results) ? results : [];
+      rows.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${escapeHtml(String(item.class_name ?? ''))}</td>
+          <td>${escapeHtml(String(item.value ?? ''))}</td>
+          <td>${escapeHtml(String(item.confidence ?? ''))}</td>
+          <td class="mono">${escapeHtml(formatBbox(item.bbox))}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (!tbody.children.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="4">无识别结果</td>';
+        tbody.appendChild(tr);
+      }
+
+      table.appendChild(tbody);
+      return table;
+    }
+
+    function createSectionTitle(text) {
+      const el = document.createElement('div');
+      el.className = 'section-title';
+      el.textContent = text;
+      return el;
+    }
+
+    function toImageDataUrl(base64Text) {
+      const text = String(base64Text || '').trim();
+      if (!text) return '';
+      if (text.startsWith('data:image/')) return text;
+      return `data:image/png;base64,${text}`;
+    }
+
+    function appendResultImage(card, base64Text, altText) {
+      const src = toImageDataUrl(base64Text);
+      if (!src) return;
+      const img = document.createElement('img');
+      img.className = 'result-image';
+      img.alt = altText || 'yolo result';
+      img.src = src;
+      card.appendChild(img);
+    }
+
+    function appendImageResult(card, result, mode) {
+      if (mode === 'detail' && result && Array.isArray(result.results)) {
+        appendResultImage(card, result.source_image, 'yolo result image');
+        card.appendChild(createDetailTable(result.results));
+        return;
+      }
+
+      if (result && typeof result === 'object' && !Array.isArray(result)) {
+        appendResultImage(card, result.source_image, 'yolo result image');
+        card.appendChild(createExternalTable(result.overall_result || {}));
+        return;
+      }
+
+      card.appendChild(createExternalTable(result || {}));
+    }
+
+    function appendPdfResult(card, result, mode) {
+      const pages = Array.isArray(result.pages) ? result.pages : [];
+      pages.forEach(page => {
+        const pageIndex = page?.page_index ?? '?';
+        card.appendChild(createSectionTitle(`第 ${pageIndex} 页`));
+        const pageData = page?.data ?? {};
+
+        if (mode === 'detail' && pageData && Array.isArray(pageData.results)) {
+          appendResultImage(card, pageData.source_image, `pdf page ${pageIndex} yolo result image`);
+          card.appendChild(createDetailTable(pageData.results));
+        } else {
+          appendResultImage(card, pageData.source_image, `pdf page ${pageIndex} yolo result image`);
+          card.appendChild(createExternalTable(pageData.overall_result || pageData));
+        }
+      });
+    }
+
+    function renderResults(files, data, mode) {
+      resultList.innerHTML = '';
+      const dataArr = Array.isArray(data) ? data : [data];
+
+      dataArr.forEach((result, idx) => {
+        const card = document.createElement('article');
+        card.className = 'result-card';
+
+        const title = document.createElement('div');
+        title.className = 'result-title';
+        title.textContent = files[idx]?.name || `文件 ${idx + 1}`;
+
+        card.appendChild(title);
+        if (result && result.file_type === 'pdf') {
+          appendPdfResult(card, result, mode);
+        } else {
+          appendImageResult(card, result, mode);
+        }
+        resultList.appendChild(card);
+      });
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    async function submit() {
+      if (!selectedFiles.length) {
+        setStatus('请先选择文件', true);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus('识别中，请稍候...');
+
+      try {
+        const form = new FormData();
+        selectedFiles.forEach(file => form.append('files', file));
+
+        const mode = modeEl.value;
+        const resp = await fetch(`/ocr?response_mode=${encodeURIComponent(mode)}`, {
+          method: 'POST',
+          body: form,
+        });
+
+        if (!resp.ok) {
+          let msg = `请求失败 (${resp.status})`;
+          try {
+            const errData = await resp.json();
+            if (errData && errData.detail) msg = String(errData.detail);
+          } catch (_) {}
+          throw new Error(msg);
+        }
+
+        const data = await resp.json();
+        renderResults(selectedFiles, data, mode);
+        setStatus('识别完成');
+      } catch (err) {
+        setStatus(err?.message || '识别失败', true);
+      } finally {
+        submitBtn.disabled = selectedFiles.length === 0;
+      }
+    }
+
+    dropzone.addEventListener('click', () => input.click());
+    input.addEventListener('change', () => setFiles(input.files));
+
+    dropzone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      setFiles(e.dataTransfer.files);
+    });
+
+    submitBtn.addEventListener('click', submit);
+  </script>
+</body>
+</html>

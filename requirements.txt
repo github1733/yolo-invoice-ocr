@@ -1,0 +1,8 @@
+numpy==2.2.6
+opencv-python==4.13.0.92
+ultralytics==8.4.33
+rapidocr==3.8.1
+fastapi==0.135.3
+uvicorn==0.44.0
+python-multipart==0.0.26
+pymupdf==1.27.2.2
