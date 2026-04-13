@@ -5,7 +5,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 UI_INDEX = BASE_DIR / "ui" / "index.html"
 
-MODEL_PATH = str(BASE_DIR / "weights" / "base" / "best.pt")
+MODEL_PATH = str(BASE_DIR / "weights" / "zzs" / "best.pt")
 CONFIG_PATH = "default_rapidocr.yaml"
 
 BOX_PADDING = 4

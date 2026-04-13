@@ -57,7 +57,14 @@ uvicorn ocr_api:app --host 0.0.0.0 --port 8000
 ## Docker 启动
 
 ```bash
-docker compose up -d --build
+docker compose up -d
+```
+
+首次构建或代码/依赖变更后再执行：
+
+```bash
+docker compose build ocr-api
+docker compose up -d
 ```
 
 查看状态：
@@ -146,22 +153,3 @@ OCR_MAX_WORKERS=8 PDF_DPI=250 python ocr_api.py
 - 报错 `文件无法解码为图片`：请确认上传文件为有效图片/PDF。
 - 报错找不到权重：确认 `weights/base/best.pt` 存在且容器内路径可读。
 - PDF 处理报错：确认已安装 `pymupdf`（`requirements.txt` 已包含）。
-
-## 推送到 GitHub
-
-```bash
-git init
-git add .
-git commit -m "init: yolo ocr api"
-git branch -M main
-git remote add origin <your-repo-url>
-git push -u origin main
-```
-
-如果你已初始化过仓库，只需要：
-
-```bash
-git add README.md
-git commit -m "docs: add project README"
-git push
-```

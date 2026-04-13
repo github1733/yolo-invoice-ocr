@@ -1,5 +1,6 @@
 services:
   ocr-api:
+    image: yolo-ocr-api:latest
     build:
       context: .
       dockerfile: Dockerfile
