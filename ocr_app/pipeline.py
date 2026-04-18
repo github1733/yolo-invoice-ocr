@@ -14,7 +14,12 @@ from .utils import (
     get_class_name,
     image_to_base64_png,
     is_pdf_file,
+    normalize_value_by_rules,
     pdf_bytes_to_images,
+    parse_class_spec,
+    resolve_class_rules,
+    should_drop_overall,
+    should_skip_ocr,
 )
 
 
@@ -70,24 +75,35 @@ def run_detection_and_ocr_image(
                 new_h = max(1, int(round(ch * scale)))
                 crop = cv2.resize(crop, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
 
-            class_name = get_class_name(result.names, cls_id)
+            class_name_raw = get_class_name(result.names, cls_id)
+            class_name, inline_rules = parse_class_spec(class_name_raw)
+            rules = resolve_class_rules(class_name, inline_rules)
+
             label = f"{class_name} {float(conf):.2f}"
             draw_detection(vis_image, int(x1), int(y1), int(x2), int(y2), label)
 
-            value = ""
+            raw_value = ""
             ocr_error = None
             try:
-                ocr_raw = engine(crop)
-                value = extract_ocr_value(ocr_raw)
+                if not should_skip_ocr(class_name, rules):
+                    ocr_raw = engine(crop)
+                    raw_value = extract_ocr_value(ocr_raw)
             except Exception as e:  # noqa: BLE001
                 ocr_error = str(e)
 
+            value = normalize_value_by_rules(raw_value, rules)
             item: dict[str, Any] = {
                 "class_name": class_name,
                 "value": value,
                 "confidence": round(float(conf), 4),
                 "bbox": [int(x1), int(y1), int(x2), int(y2)],
             }
+            if class_name_raw != class_name:
+                item["class_name_raw"] = class_name_raw
+            if raw_value and raw_value != value:
+                item["value_raw"] = raw_value
+            if should_drop_overall(class_name, rules):
+                item["exclude_from_overall"] = True
             if ocr_error:
                 item["ocr_error"] = ocr_error
 
