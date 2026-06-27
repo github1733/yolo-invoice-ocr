@@ -41,6 +41,8 @@
 
 ```bash
 # 1) 安装依赖
+pip install rapidocr onnxruntime
+pip uninstall opencv-python -y
 pip install -r requirements.txt
 
 # 2) 启动服务
@@ -48,6 +50,8 @@ python ocr_api.py
 # 或
 uvicorn ocr_api:app --host 0.0.0.0 --port 8000
 ```
+
+说明：`requirements.txt` 中的 PyTorch 依赖按平台区分，Linux 使用 CPU wheel，macOS 使用不带 `+cpu` 后缀的官方版本。
 
 启动后访问：
 
